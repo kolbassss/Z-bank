@@ -5,6 +5,8 @@ import bcrypt
 
 managment_user = APIRouter()
 
+auth=False #переменная для простой проверки авторизации юзера
+
 @managment_user.post("/create_user")
 def register_user(name:str, surname:str, email:str, number:str, password:str):
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
@@ -23,18 +25,19 @@ def auth_user(email:str, password:str):
         raise HTTPException(status_code=404, detail="not found")
     if bcrypt.hashpw(password.encode('utf-8'), profile.password) == profile.password:
         profile.authorize = "authorize"
+        auth=True
         return {"message": "authorized successfully"}
     raise HTTPException(status_code=404, detail="check enter data")
 
 @managment_user.get("/read_profile_user")
 def read_profile_user():
-    if profile == None or profile.authorize == "not authorize":
+    if auth==False:
         raise HTTPException(status_code=401, detail="you not authrize")
     return profile
 
 @managment_user.put("/update_name_profile")
 def update_name_profile_user(new_name:str):
-    if profile.authorize == "authorize":
+    if auth==True:
         profile.name = new_name
         session.commit()
         return {"message": "name update"}
@@ -42,7 +45,7 @@ def update_name_profile_user(new_name:str):
     
 @managment_user.put("/update_surname_profile")
 def update_surname_profile_user(new_surname:str):
-    if profile.authorize == "authorize":
+    if auth==True:
         profile.surname = new_surname
         session.commit()
         return {"message": "surname update"}
@@ -50,7 +53,7 @@ def update_surname_profile_user(new_surname:str):
     
 @managment_user.put("/update_password_profile")
 def update_password_profile_user(current_password:str, new_password:str, confirm_new_password:str):
-    if profile.authorize == "authorize":
+    if auth==True:
         if bcrypt.hashpw(current_password.encode('utf-8'), profile.password) == profile.password:
             if new_password == confirm_new_password:
                 hashed_new_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
@@ -63,10 +66,11 @@ def update_password_profile_user(current_password:str, new_password:str, confirm
 
 @managment_user.delete("/delete_profile_user")
 def delete_user_profile(you_really_delete_your_profile:str):
-    if profile.authorize == "authorize":
+    if auth==True:
         if you_really_delete_your_profile == 'Yes':
             session.delete(profile)
             session.commit
+            auth=False
             return {"message": "your profile delete"}
         elif you_really_delete_your_profile == 'No':
             return {""}
